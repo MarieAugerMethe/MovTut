@@ -1,0 +1,11 @@
+# Ignore R studio files
+*.Rproj
+
+# Ignore TMB compiled files
+*.o
+*.so
+
+# Ignore tex files
+*.tex
+*.synctex.gz
+*.log
