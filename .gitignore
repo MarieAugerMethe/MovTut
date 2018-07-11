@@ -9,3 +9,9 @@
 *.tex
 *.synctex.gz
 *.log
+.Rproj.user
+
+# Ignore figures and cached files
+figure/*
+cache/*
+
