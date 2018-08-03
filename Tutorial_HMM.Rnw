@@ -363,7 +363,7 @@ Ah, that's better. Not perfect, but less unexplained autocorrelation, especially
 
 We can also use the function \texttt{simData} to look at whether the movement produce by the models is similar to the observed movement.
 
-Let's simulate the 3-state HMMs, and then fit it to be able to identify the behavioural states.
+Let's simulate the 3-state HMMs, and then fit it to be able to identify the behavioural states. Note that we could just plot directly the simulated data, rather than estimating the fitting the model and predicting the states. This might require a bit of fiddling\footnote{A good thing to know is that the colour paletter used by the packages is: \texttt{c("\#E69F00", "\#56B4E9", "\#009E73", "\#F0E442", "\#0072B2", "\#D55E00", "\#CC79A7")}}. One way fitting the model to the simulated data may be useful is in identifying whether you have enough data to estimate your parameters accurately.
 
 <<simData, cache=TRUE>>=
 # Simulate the model
@@ -373,11 +373,14 @@ sealSimFit <- fitHMM(sealSim,
                     nbState = 3, 
                     dist=list(step="gamma", angle="vm"), 
                     Par0 = list(step=c(mu03s, sigma03s), angle=kappa03s))
+# Plot the results
 plot(sealSimFit)
-
+# Compared the parameter estimates
+sealSimFit
+sealHMM3s
 @
 
-Looks similar, except maybe that the real seal goes back and forth to some of the same locations, something not captured in the simulation.
+Looks similar, except maybe that the real seal goes back and forth to some of the same locations, something not captured in the simulation. The parameter estimates are closed to those used to simulate the data, which is good.
 
 \subsection{Confidence intervals}
 
@@ -430,7 +433,7 @@ There are two ways in which the bathymetry can influence the movement of the ani
 
 Let's explore the first option. So here we are assuming that the probability to switch between behavioural states is affected by the bathymetry. Because of the way the HMMs are constructed, we have to estimate one more parameter per switching probability ($\gamma_{ij}$ said gamma i j), excluding the probability of remaining in the same state, which can be deducted based on the switching probabilities. Please see the mathy section below to understand the details. So if $N$ represents the number of states, it means you need to estimate $N(N-1)$ new parameters. So for an HMM with 3 states, we would estimate 6 new parameters.
 
-The main argument of the \texttt{fitHMM} function that we need to change are the \texttt{formula} and the starting values (because we have 6 new parameters to estimate). The default value for the \texttt{formula} is $\sim 1$, which means that the transition probability are not affected by covariates. Here, we want to indicate that the transition probability are affected by the bathymetry. We can use the function \texttt{getPar0} to help us find starting values based on our simpler 3-state HMMs. Note that we have to refit the simpler model with the new data that has the bathymetry data.
+The main argument of the \texttt{fitHMM} function that we need to change are the \texttt{formula} and the starting values (because we have 6 new parameters to estimate). The default value for the \texttt{formula} is $\sim 1$, which means that the transition probability are not affected by covariates. Here, we want to indicate that the transition probability are affected by the bathymetry. We can use the function \texttt{getPar0} to help us find starting values based on our simpler 3-state HMMs. This might be a bit of an overkill for this model, as \texttt{getPar0} will set the starting values for the covariate effects on the transition probabilities to 0. But it can make a small difference to use good starting values for the other parameters (might be woth looking if it makes indeed a difference). Note that to be able to use \texttt{getPar0} in this case, we have to refit the simpler model with the new data that has the bathymetry data.
 
 <<bathyBeh, cache=TRUE>>=
 # New formula
@@ -444,6 +447,8 @@ sealHMM3s <- fitHMM(sealPrep,
 
 # Get new starting values based on simpler model, here the 3-states HMM
 par0b <- getPar0(model=sealHMM3s, formula=bathyForm)
+# Look at the starting values
+par0b
 
 # Now we fit the new model with bathymetry
 sealHMMb <- fitHMM(sealPrep, nbState = 3, 
@@ -481,7 +486,7 @@ plot(water, col=bluePal(50))
 
 # Let's plot only the state 1
 points(sealPrep[viterbi(sealHMMb) == 1, c("x","y")], 
-       col="gold",
+       col="#E69F00",
        pch=19)
 @
 
@@ -551,7 +556,7 @@ So it looks like there is a higher probability of being in state 2 (the foraging
 
 % Ask kim if the data is in UTC?
 
-Covariates can affect the state-dependent movement, by which I mean the characteristics of the movement in a given state. So for example, the animal might make all the behaviours at night and during the day, but at night it might do them with smaller steps. Here, we are going to look at whether the seal is more or less directed at night. To do this, we are going to change the argument \texttt{DM}. 
+Covariates can affect the state-dependent movement, by which I mean the characteristics of the movement in a given state. So for example, the animal might make all the behaviours at night and during the day, but at night it might do them with smaller steps. Here, we are going to look at whether the seal is more or less directed at night. To do this, we are going to change the argument \texttt{DM}. For this kind of model, it's particular useful to use \texttt{getPar0}, because it helps set starting values for the parameters associated with the effects of covariates on the movement parameters.
 
 <<diurnalDM, cache=TRUE>>=
 # Use the formula to describe the changes in the design matrix
@@ -559,6 +564,8 @@ diurnDM <- list(angle = list(concentration = ~ cosinor(hour, period = 24)))
 
 # Get parameter starting values
 par0diurnDM <- getPar0(model=sealHMM3s, DM=diurnDM)
+# Look at starting values
+par0diurnDM
 
 # Now we fit the new diurnal model with the starting values returned by getPar0
 sealHMMdiurnDM <- fitHMM(sealPrep, nbState = 3, 
@@ -694,7 +701,7 @@ Give it a try on your own data! If you don't have data try the other activities.
 
 This is fun but could be hard. Skip to the next activity if you find the material challenging.
 
-Let's look whether adding bathymetry improved the simulations. Here, it's easy to have some problem, where the animal moves outside of the raster. So to help, we are setting the initial position as the initial position observed. We are also limiting the simulation to a time series of 200 steps. We are also setting the seed, because the animal will often wonder off map by chance.
+Let's look whether adding bathymetry improved the simulations. Here, it's easy to have some problem, where the animal moves outside of the raster. So to help, we are setting the initial position as the initial position observed. We are also limiting the simulation to a time series of 200 steps. We are also setting the seed, because the animal will often wonder off map by chance. 
 
 <<simBathy, cache=TRUE>>=
 set.seed(1)
@@ -710,7 +717,7 @@ sealSimFitB <- fitHMM(sealSimB,
 # Plot simulation
 plot(water, col=bluePal(50))
 points(sealSimB[,c("x","y")], 
-       col=c("gold", "deepskyblue", "forestgreen")[viterbi(sealHMMb)], 
+       col=c("#E69F00", "#56B4E9", "#009E73")[viterbi(sealHMMb)], 
        pch=19, cex=0.5)
 @
 
